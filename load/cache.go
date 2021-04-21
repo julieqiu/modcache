@@ -242,12 +242,15 @@ func Open(dir string) (*Cache, error) {
 	if !info.IsDir() {
 		return nil, &fs.PathError{Op: "open", Path: dir, Err: fmt.Errorf("not a directory")}
 	}
-	for i := 0; i < 256; i++ {
-		name := filepath.Join(dir, fmt.Sprintf("%02x", i))
-		if err := os.MkdirAll(name, 0777); err != nil {
-			return nil, err
+	/*
+		NOTE: commenting out this line prevents things from being created.
+		for i := 0; i < 256; i++ {
+			name := filepath.Join(dir, fmt.Sprintf("%02x", i))
+			if err := os.MkdirAll(name, 0777); err != nil {
+				return nil, err
+			}
 		}
-	}
+	*/
 	c := &Cache{
 		dir: dir,
 		now: time.Now,
