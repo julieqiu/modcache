@@ -54,7 +54,7 @@ gocmd -q [name] [symbol]
 		}
 
 		srcDir := "/Users/julieqiu/go/pkg/mod/golang.org/x/tools@v0.1.0/godoc"
-		load.CachedImport(&build.Default, pkgPath, srcDir, modulePath, *cacheDir, build.FindOnly)
+		load.LegacyCachedImport(&build.Default, pkgPath, srcDir, modulePath, *cacheDir, build.FindOnly)
 	}
 	// Check for file.
 }

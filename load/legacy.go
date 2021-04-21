@@ -14,14 +14,14 @@ import (
 
 // cachedPackage is the data structure stored in the cache.
 // It would be more efficient not to use JSON here.
-type CachedPackage struct {
+type LegacyCachedPackage struct {
 	// TODO: what is https://pkg.go.dev/go/token#Position
 	Build    build.Package
 	FileHash map[string]string
 }
 
 // cachedImport is cfg.BuildContext.Import but cached.
-func CachedImport(ctx *build.Context, path, srcDir, modulePath, cacheDir string, mode build.ImportMode) (*build.Package, error) {
+func LegacyCachedImport(ctx *build.Context, path, srcDir, modulePath, cacheDir string, mode build.ImportMode) (*build.Package, error) {
 	// Rewrite Import into ImportDir by asking Import
 	// to find the dir but not read any files.
 	// Then we don't need to have separate cache entries for search srcDir.
@@ -42,14 +42,14 @@ func CachedImport(ctx *build.Context, path, srcDir, modulePath, cacheDir string,
 	// The IgnoreVendor bit doesn't matter to ImportDir.
 	// Clear it to get more cache hits.
 	fmt.Println(3)
-	return cachedImportDir(ctx, p.Dir, modulePath, cacheDir, mode&^build.IgnoreVendor)
+	return legacyCachedImportDir(ctx, p.Dir, modulePath, cacheDir, mode&^build.IgnoreVendor)
 }
 
 var cacheVerify = os.Getenv("GOCMDCACHEVERIFY") == "1"
 
 const HashSize = 32
 
-func cachedImportDir(ctx *build.Context, dir, modulePath, cacheDir string, mode build.ImportMode) (*build.Package, error) {
+func legacyCachedImportDir(ctx *build.Context, dir, modulePath, cacheDir string, mode build.ImportMode) (*build.Package, error) {
 	uncached := func() (*build.Package, error) {
 		fmt.Println("uncached: ctx.ImportDir")
 		return ctx.ImportDir(dir, mode)
@@ -116,7 +116,7 @@ func cachedImportDir(ctx *build.Context, dir, modulePath, cacheDir string, mode 
 		if cacheVerify {
 			cacheEntry = data
 		} else {
-			var cp CachedPackage
+			var cp LegacyCachedPackage
 			if err := json.Unmarshal(data, &cp); err == nil {
 				for name, hash := range cp.FileHash {
 					fmt.Println(name, hash)
@@ -146,7 +146,7 @@ func cachedImportDir(ctx *build.Context, dir, modulePath, cacheDir string, mode 
 	// We have the:
 	// - Package
 	// - Loaded all the files of that package
-	var cp CachedPackage
+	var cp LegacyCachedPackage
 	cp.Build = *pkg
 	allFiles := StringList(
 		pkg.GoFiles,
