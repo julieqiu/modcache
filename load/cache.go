@@ -441,7 +441,7 @@ func (c *Cache) get(id ActionID) (Entry, error) {
 
 // fileName returns the name of the file corresponding to the given id.
 func (c *Cache) fileName(id [HashSize]byte, key string) string {
-	return filepath.Join(c.dir, "myfilecache")
+	return filepath.Join(c.dir, "mycachefile")
 }
 
 // Time constants for cache expiration.
@@ -538,6 +538,7 @@ func (c *Cache) copyFile(file io.ReadSeeker, out OutputID, size int64) error {
 	}
 	f, err := os.OpenFile(name, mode, 0666)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 	defer f.Close()
@@ -624,7 +625,7 @@ func (c *Cache) putIndexEntry(id ActionID, out OutputID, size int64, allowVerify
 			panic(msg)
 		}
 	}
-	file := c.fileName(id, "a")
+	file := filepath.Join(c.dir, "cacheindex")
 
 	// Copy file to cache directory.
 	mode := os.O_WRONLY | os.O_CREATE
