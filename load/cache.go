@@ -38,8 +38,9 @@ func StringList(args ...interface{}) []string {
 
 // A Cache is a package cache, backed by a file system directory tree.
 type Cache struct {
-	dir string
-	now func() time.Time
+	dir    string
+	now    func() time.Time
+	exists bool
 }
 
 var (
@@ -187,6 +188,12 @@ func (c *Cache) PutBytes(id ActionID, data []byte) error {
 	return err
 }
 
+// LegacyPutBytes stores the given bytes in the cache as the output for the action ID.
+func (c *Cache) LegacyPutBytes(id ActionID, data []byte) error {
+	_, _, err := c.Put(id, bytes.NewReader(data))
+	return err
+}
+
 var (
 	defaultDirOnce sync.Once
 	defaultDir     string
@@ -242,15 +249,13 @@ func Open(dir string) (*Cache, error) {
 	if !info.IsDir() {
 		return nil, &fs.PathError{Op: "open", Path: dir, Err: fmt.Errorf("not a directory")}
 	}
-	/*
-		NOTE: commenting out this line prevents things from being created.
-		for i := 0; i < 256; i++ {
-			name := filepath.Join(dir, fmt.Sprintf("%02x", i))
-			if err := os.MkdirAll(name, 0777); err != nil {
-				return nil, err
-			}
+	//	NOTE: commenting out this line prevents things from being created.
+	for i := 0; i < 256; i++ {
+		name := filepath.Join(dir, fmt.Sprintf("%02x", i))
+		if err := os.MkdirAll(name, 0777); err != nil {
+			return nil, err
 		}
-	*/
+	}
 	c := &Cache{
 		dir: dir,
 		now: time.Now,
@@ -436,7 +441,7 @@ func (c *Cache) get(id ActionID) (Entry, error) {
 
 // fileName returns the name of the file corresponding to the given id.
 func (c *Cache) fileName(id [HashSize]byte, key string) string {
-	return filepath.Join(c.dir, fmt.Sprintf("%02x", id[0]), fmt.Sprintf("%x", id)+"-"+key)
+	return filepath.Join(c.dir, "myfilecache")
 }
 
 // Time constants for cache expiration.
@@ -509,6 +514,7 @@ func (c *Cache) put(id ActionID, file io.ReadSeeker, allowVerify bool) (OutputID
 func (c *Cache) copyFile(file io.ReadSeeker, out OutputID, size int64) error {
 	name := c.fileName(out, "d")
 	info, err := os.Stat(name)
+	fmt.Println("1!!!")
 	if err == nil && info.Size() == size {
 		// Check hash.
 		if f, err := os.Open(name); err == nil {
@@ -525,6 +531,7 @@ func (c *Cache) copyFile(file io.ReadSeeker, out OutputID, size int64) error {
 	}
 
 	// Copy file to cache directory.
+	fmt.Println("2!!!")
 	mode := os.O_RDWR | os.O_CREATE
 	if err == nil && info.Size() > size { // shouldn't happen but fix in case
 		mode |= os.O_TRUNC
@@ -534,6 +541,7 @@ func (c *Cache) copyFile(file io.ReadSeeker, out OutputID, size int64) error {
 		return err
 	}
 	defer f.Close()
+	fmt.Println("3!!!")
 	if size == 0 {
 		// File now exists with correct size.
 		// Only one possible zero-length file, so contents are OK too.
@@ -546,6 +554,7 @@ func (c *Cache) copyFile(file io.ReadSeeker, out OutputID, size int64) error {
 	// before returning, to avoid leaving bad bytes in the file.
 
 	// Copy file to f, but also into h to double-check hash.
+	fmt.Println("4!!!")
 	if _, err := file.Seek(0, 0); err != nil {
 		f.Truncate(0)
 		return err
@@ -556,6 +565,7 @@ func (c *Cache) copyFile(file io.ReadSeeker, out OutputID, size int64) error {
 		f.Truncate(0)
 		return err
 	}
+	fmt.Println("5!!!")
 	// Check last byte before writing it; writing it will make the size match
 	// what other processes expect to find and might cause them to start
 	// using the file.
@@ -564,6 +574,7 @@ func (c *Cache) copyFile(file io.ReadSeeker, out OutputID, size int64) error {
 		f.Truncate(0)
 		return err
 	}
+	fmt.Println("6!!!")
 	h.Write(buf)
 	sum := h.Sum(nil)
 	if !bytes.Equal(sum, out[:]) {
@@ -572,10 +583,12 @@ func (c *Cache) copyFile(file io.ReadSeeker, out OutputID, size int64) error {
 	}
 
 	// Commit cache file entry.
+	fmt.Println("7!!!")
 	if _, err := f.Write(buf); err != nil {
 		f.Truncate(0)
 		return err
 	}
+	fmt.Println("8!!!")
 	if err := f.Close(); err != nil {
 		// Data might not have been written,
 		// but file may look like it is the right size.

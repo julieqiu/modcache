@@ -6,7 +6,6 @@ import (
 	"go/build"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/julieqiu/modcache/load"
@@ -45,20 +44,8 @@ gocmd -q [name] [symbol]
 			flag.Usage()
 			log.Fatalf("The specified import path must be a package in the module.")
 		}
-		f := filepath.Join(*cacheDir, modulePath, "@v", cachefile())
-		if _, err := os.Stat(f); err != nil {
-			if !os.IsNotExist(err) {
-				log.Fatal(err)
-			}
-			fmt.Printf("%q does not exist.\n", f)
-		}
-
 		srcDir := "/Users/julieqiu/go/pkg/mod/golang.org/x/tools@v0.1.0/godoc"
-		load.LegacyCachedImport(&build.Default, pkgPath, srcDir, modulePath, *cacheDir, build.FindOnly)
+		load.CachedImport(&build.Default, pkgPath, srcDir, modulePath, *cacheDir, build.FindOnly)
 	}
 	// Check for file.
-}
-
-func cachefile() string {
-	return "cachefile"
 }

@@ -129,7 +129,6 @@ func legacyCachedImportDir(ctx *build.Context, dir, modulePath, cacheDir string,
 				}
 				return &cp.Build, nil
 			}
-
 		}
 	}
 	// TODO: why call uncached here?
@@ -182,7 +181,7 @@ func legacyCachedImportDir(ctx *build.Context, dir, modulePath, cacheDir string,
 			panic(1)
 		}
 		// Write to the cache
-		c.PutBytes(actionID, data)
+		c.LegacyPutBytes(actionID, data)
 	}
 
 	// Return the package
