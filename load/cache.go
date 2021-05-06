@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"go/token"
 	"hash"
 	"io"
 	"io/fs"
@@ -55,17 +56,25 @@ type Dir struct {
 	SrcRoot       string
 	PkgRoot       string
 	GoFiles       []*FileInfo
-	NonGoFiles    []string // TODO
+	NonGoFiles    []string
 }
 
 type FileInfo struct {
 	Name      string
-	BuildTags []string // TODO
-	Imports   []string
-	// ImportPos       []string
-	// EmbedPatterns   []string
-	// EmbedPatternPos []string
-	Exports []string // TODO
+	BuildTags []string
+	Imports   []FileImport
+	Embeds    []FileEmbed
+	Exports   []string
+}
+
+type FileImport struct {
+	Path string
+	Pos  token.Pos
+}
+
+type FileEmbed struct {
+	Pattern string
+	Pos     token.Position
 }
 
 var (

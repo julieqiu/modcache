@@ -954,12 +954,12 @@ Found:
 		*fileList = append(*fileList, name)
 		if importMap != nil {
 			for _, imp := range info.Imports {
-				importMap[imp.Path] = append(importMap[imp.Path], fset.Position(imp.pos))
+				importMap[imp.Path] = append(importMap[imp.Path], fset.Position(imp.Pos))
 			}
 		}
 		if embedMap != nil {
 			for _, emb := range info.Embeds {
-				embedMap[emb.pattern] = append(embedMap[emb.pattern], emb.pos)
+				embedMap[emb.Pattern] = append(embedMap[emb.Pattern], emb.Pos)
 			}
 		}
 	}
@@ -969,13 +969,13 @@ Found:
 	}
 	sort.Strings(p.AllTags)
 
-	p.EmbedPatterns, p.EmbedPatternPos = cleanDecls(embedPos)
-	p.TestEmbedPatterns, p.TestEmbedPatternPos = cleanDecls(testEmbedPos)
-	p.XTestEmbedPatterns, p.XTestEmbedPatternPos = cleanDecls(xTestEmbedPos)
+	p.EmbedPatterns, p.EmbedPatternPos = CleanDecls(embedPos)
+	p.TestEmbedPatterns, p.TestEmbedPatternPos = CleanDecls(testEmbedPos)
+	p.XTestEmbedPatterns, p.XTestEmbedPatternPos = CleanDecls(xTestEmbedPos)
 
-	p.Imports, p.ImportPos = cleanDecls(importPos)
-	p.TestImports, p.TestImportPos = cleanDecls(testImportPos)
-	p.XTestImports, p.XTestImportPos = cleanDecls(xTestImportPos)
+	p.Imports, p.ImportPos = CleanDecls(importPos)
+	p.TestImports, p.TestImportPos = CleanDecls(testImportPos)
+	p.XTestImports, p.XTestImportPos = CleanDecls(xTestImportPos)
 
 	// add the .S/.sx files only if we are using cgo
 	// (which means gcc will compile them).
@@ -1353,13 +1353,13 @@ type FileInfo struct {
 
 type FileImport struct {
 	Path string
-	pos  token.Pos
+	Pos  token.Pos
 	doc  *ast.CommentGroup
 }
 
 type FileEmbed struct {
-	pattern string
-	pos     token.Position
+	Pattern string
+	Pos     token.Position
 }
 
 // matchFile determines whether the file with the given name in the given directory
@@ -1436,7 +1436,7 @@ func (ctxt *Context) matchFile(dir, name string, allTags map[string]bool, binary
 	return info, nil
 }
 
-func cleanDecls(m map[string][]token.Position) ([]string, map[string][]token.Position) {
+func CleanDecls(m map[string][]token.Position) ([]string, map[string][]token.Position) {
 	all := make([]string, 0, len(m))
 	for path := range m {
 		all = append(all, path)

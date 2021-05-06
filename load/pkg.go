@@ -84,9 +84,13 @@ func CachedImport(ctx *build.Context,
 		f.Close()
 
 		fi := &FileInfo{Name: info.Name}
-		for _, i := range info.Imports {
-			fi.Imports = append(fi.Imports, i.Path)
+		for _, imp := range info.Imports {
+			fi.Imports = append(fi.Imports, FileImport{Path: imp.Path, Pos: imp.Pos})
 		}
+		for _, emb := range info.Embeds {
+			fi.Embeds = append(fi.Embeds, FileEmbed{Pattern: emb.Pattern, Pos: emb.Pos})
+		}
+
 		d.GoFiles = append(d.GoFiles, fi)
 		syms, err := loadIdentifiers(pkg.ImportPath, filepath.Join(pkg.Dir, file))
 		if err != nil {
@@ -99,20 +103,21 @@ func CachedImport(ctx *build.Context,
 		}
 	}
 
-	/*
-		nonGoFiles := StringList(
-			pkg.CgoFiles,
-			pkg.CFiles,
-			pkg.CXXFiles,
-			pkg.MFiles,
-			pkg.HFiles,
-			pkg.FFiles,
-			pkg.SFiles,
-			pkg.SwigFiles,
-			pkg.SwigCXXFiles,
-			pkg.SysoFiles,
-		)
-	*/
+	nonGoFiles := StringList(
+		pkg.CgoFiles,
+		pkg.CFiles,
+		pkg.CXXFiles,
+		pkg.MFiles,
+		pkg.HFiles,
+		pkg.FFiles,
+		pkg.SFiles,
+		pkg.SwigFiles,
+		pkg.SwigCXXFiles,
+		pkg.SysoFiles,
+	)
+	for _, file := range nonGoFiles {
+		d.NonGoFiles = append(d.NonGoFiles, file)
+	}
 
 	fmt.Println("Marshaling data to file")
 	data, err := json.MarshalIndent(&c.Dirs, "", "\t")
