@@ -182,8 +182,8 @@ func FileHash(file string) ([HashSize]byte, error) {
 	return out, nil
 }
 
-// PutBytes stores the given bytes in the cache as the output for the action ID.
-func (c *Cache) PutBytes(id ActionID, data []byte) error {
+func (c *Cache) PutBytes(data []byte) error {
+	id := ActionID{} // id doesn't matter
 	_, _, err := c.Put(id, bytes.NewReader(data))
 	return err
 }
@@ -486,7 +486,7 @@ func (c *Cache) used(file string) {
 }
 
 func (c *Cache) put(id ActionID, file io.ReadSeeker, allowVerify bool) (OutputID, int64, error) {
-	fmt.Println("putting: ", id)
+	fmt.Printf("ActionID: %v\n", id)
 
 	// Compute output ID.
 	h := sha256.New()
@@ -513,8 +513,9 @@ func (c *Cache) put(id ActionID, file io.ReadSeeker, allowVerify bool) (OutputID
 // output ID and size, if that file is not present already.
 func (c *Cache) copyFile(file io.ReadSeeker, out OutputID, size int64) error {
 	name := c.fileName(out, "d")
+	fmt.Printf("copying file to %q\n", name)
+
 	info, err := os.Stat(name)
-	fmt.Println("1!!!")
 	if err == nil && info.Size() == size {
 		// Check hash.
 		if f, err := os.Open(name); err == nil {
@@ -531,18 +532,15 @@ func (c *Cache) copyFile(file io.ReadSeeker, out OutputID, size int64) error {
 	}
 
 	// Copy file to cache directory.
-	fmt.Println("2!!!")
 	mode := os.O_RDWR | os.O_CREATE
 	if err == nil && info.Size() > size { // shouldn't happen but fix in case
 		mode |= os.O_TRUNC
 	}
 	f, err := os.OpenFile(name, mode, 0666)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 	defer f.Close()
-	fmt.Println("3!!!")
 	if size == 0 {
 		// File now exists with correct size.
 		// Only one possible zero-length file, so contents are OK too.
@@ -555,7 +553,6 @@ func (c *Cache) copyFile(file io.ReadSeeker, out OutputID, size int64) error {
 	// before returning, to avoid leaving bad bytes in the file.
 
 	// Copy file to f, but also into h to double-check hash.
-	fmt.Println("4!!!")
 	if _, err := file.Seek(0, 0); err != nil {
 		f.Truncate(0)
 		return err
@@ -566,7 +563,6 @@ func (c *Cache) copyFile(file io.ReadSeeker, out OutputID, size int64) error {
 		f.Truncate(0)
 		return err
 	}
-	fmt.Println("5!!!")
 	// Check last byte before writing it; writing it will make the size match
 	// what other processes expect to find and might cause them to start
 	// using the file.
@@ -575,7 +571,6 @@ func (c *Cache) copyFile(file io.ReadSeeker, out OutputID, size int64) error {
 		f.Truncate(0)
 		return err
 	}
-	fmt.Println("6!!!")
 	h.Write(buf)
 	sum := h.Sum(nil)
 	if !bytes.Equal(sum, out[:]) {
@@ -584,12 +579,10 @@ func (c *Cache) copyFile(file io.ReadSeeker, out OutputID, size int64) error {
 	}
 
 	// Commit cache file entry.
-	fmt.Println("7!!!")
 	if _, err := f.Write(buf); err != nil {
 		f.Truncate(0)
 		return err
 	}
-	fmt.Println("8!!!")
 	if err := f.Close(); err != nil {
 		// Data might not have been written,
 		// but file may look like it is the right size.
@@ -598,7 +591,6 @@ func (c *Cache) copyFile(file io.ReadSeeker, out OutputID, size int64) error {
 		return err
 	}
 	os.Chtimes(name, c.now(), c.now()) // mainly for tests
-
 	return nil
 }
 

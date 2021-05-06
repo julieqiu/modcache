@@ -20,26 +20,23 @@ func CachedImport(ctx *build.Context,
 	//
 	// If not, nothing is cached so call
 	// ctx.ImportDir.
-	fmt.Println(1)
 	c, err := LoadCache(cacheDir, modulePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize build cache at %s: %s\n", cacheDir+modulePath, err)
 	}
-	/*
-		if c.exists {
-			return c.Package()
-		}
-	*/
+	if c.exists {
+		fmt.Println("Found!")
+		return c.Package()
+	}
 
 	// 2. The cache does not exist.
 	// Load the package, then write it to the cache.
-	fmt.Println(2)
+	fmt.Printf("Cache does not exist; importing %q from %q\n\n", path, srcDir)
 	pkg, err := ctx.Import(path, srcDir, mode|build.FindOnly)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println(3)
 	// We have the:
 	// - Package
 	// - Loaded all the files of that package
@@ -60,9 +57,8 @@ func CachedImport(ctx *build.Context,
 		pkg.TestGoFiles,
 		pkg.XTestGoFiles,
 	)
-	fmt.Println(4)
 	cp.FileHash = make(map[string]string)
-	fmt.Println("-----------------")
+	fmt.Println("Looping through all of the files in the package...\n")
 	for _, file := range allFiles {
 		sum, err := FileHash(filepath.Join(pkg.Dir, file))
 		if err == nil {
@@ -70,19 +66,20 @@ func CachedImport(ctx *build.Context,
 			fmt.Println("-----> ", file, cp.FileHash[file])
 		}
 	}
-	fmt.Println(5)
+	fmt.Println("Marshaling data to file")
 	data, err := json.MarshalIndent(&cp, "", "\t")
 	if err == nil {
 		data = append(data, '\n')
 		// Write to the cache
-		fmt.Println(6)
-		fmt.Println(string(data))
-		c.PutBytes(actionID(ctx, pkg.Dir, mode), data)
+		fmt.Println("Writing to cache...")
+		c.PutBytes(data)
 	}
 	return pkg, nil
 }
 
 func LoadCache(cacheDir, modulePath string) (*Cache, error) {
+	fmt.Printf("Loading %q from cache %q\n\n", modulePath, cacheDir)
+
 	dir := filepath.Join(cacheDir, modulePath, "@v")
 	c := &Cache{
 		dir: dir,
@@ -108,34 +105,9 @@ func LoadCache(cacheDir, modulePath string) (*Cache, error) {
 }
 
 func (c *Cache) Package() (*build.Package, error) {
-	fmt.Println("finished")
 	return &build.Package{}, nil
 }
 
 func uncached(ctx *build.Context, dir string, mode build.ImportMode) (*build.Package, error) {
 	return ctx.ImportDir(dir, mode)
-}
-
-func actionID(ctx *build.Context, dir string, mode build.ImportMode) ActionID {
-	// We have a list of files.
-	// Create a new hash.
-	h := NewHash("build.Import")
-	if debugHash {
-		fmt.Fprintf(h, "ImportDir %s mode %d\n", dir, int(mode))
-		fmt.Fprintf(h, "cfg goarch %q goos %q goroot %q gopath %q\n",
-			ctx.GOARCH, ctx.GOOS, ctx.GOROOT, ctx.GOPATH)
-		fmt.Fprintf(h, "cfg cgoenabled %v useallfiles %v compiler %q\n",
-			ctx.CgoEnabled, ctx.UseAllFiles, ctx.Compiler)
-		fmt.Fprintf(h, "cfg buildtags %q releasetags %q installsuffix %q\n",
-			ctx.BuildTags, ctx.ReleaseTags, ctx.InstallSuffix)
-		/*
-			for _, info := range infos {
-				fmt.Fprintf(h, "name %s size %d mtime %d\n", info.Name(), info.Size(), info.ModTime().UnixNano())
-				if sys := info.Sys(); sys != nil {
-					fmt.Println(h, sys)
-				}
-			}
-		*/
-	}
-	return h.Sum()
 }
