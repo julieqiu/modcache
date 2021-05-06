@@ -1,6 +1,7 @@
 package load
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"go/ast"
@@ -11,6 +12,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/julieqiu/modcache/build"
@@ -91,6 +93,10 @@ func CachedImport(ctx *build.Context,
 			return nil, err
 		}
 		fi.Exports = syms
+		fi.BuildTags, err = builds(info.Header)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	/*
@@ -205,4 +211,46 @@ func (c *Cache) Package(path, dir string) (*build.Package, error) {
 
 func uncached(ctx *build.Context, dir string, mode build.ImportMode) (*build.Package, error) {
 	return ctx.ImportDir(dir, mode)
+}
+
+var (
+	slashSlash  = []byte("//")
+	bSlashSlash = []byte(slashSlash)
+)
+
+func builds(content []byte) (_ []string, err error) {
+	// Pass 1. Identify leading run of // comments and blank lines,
+	// which must be followed by a blank line.
+	// Also identify any //go:build comments.
+	content, _, _, err = build.ParseFileHeader(content)
+	if err != nil {
+		return nil, err
+	}
+
+	// Pass 2.  Process each +build line in the run.
+	p := content
+	var builds []string
+	for len(p) > 0 {
+		line := p
+		if i := bytes.IndexByte(line, '\n'); i >= 0 {
+			line, p = line[:i], p[i+1:]
+		} else {
+			p = p[len(p):]
+		}
+		line = bytes.TrimSpace(line)
+		if !bytes.HasPrefix(line, bSlashSlash) {
+			continue
+		}
+		line = bytes.TrimSpace(line[len(bSlashSlash):])
+		if len(line) > 0 && line[0] == '+' {
+			// Looks like a comment +line.
+			f := strings.Fields(string(line))
+			if f[0] == "+build" {
+				for _, tok := range f[1:] {
+					builds = append(builds, tok)
+				}
+			}
+		}
+	}
+	return builds, nil
 }

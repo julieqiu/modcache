@@ -45,7 +45,9 @@ gocmd -q [name] [symbol]
 			log.Fatalf("The specified import path must be a package in the module.")
 		}
 		srcDir := "/Users/julieqiu/go/pkg/mod/golang.org/x/tools@v0.1.0/godoc"
-		load.CachedImport(&build.Default, pkgPath, srcDir, modulePath, *cacheDir, build.FindOnly)
+		if _, err := load.CachedImport(&build.Default, pkgPath, srcDir, modulePath, *cacheDir, build.FindOnly); err != nil {
+			log.Fatal(err)
+		}
 	}
 	// Check for file.
 }
