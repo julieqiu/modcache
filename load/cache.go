@@ -55,20 +55,17 @@ type Dir struct {
 	SrcRoot       string
 	PkgRoot       string
 	GoFiles       []*FileInfo
+	NonGoFiles    []string // TODO
 }
 
 type FileInfo struct {
 	Name      string
-	BuildTags []string
+	BuildTags []string // TODO
 	Imports   []string
 	// ImportPos       []string
 	// EmbedPatterns   []string
 	// EmbedPatternPos []string
-}
-
-type ExtraFileInfo struct {
-	PackageName string
-	Exports     []string // sorted list
+	Exports []string // TODO
 }
 
 var (

@@ -862,7 +862,7 @@ Found:
 			badFile(info.parseErr)
 			continue
 		}
-		pf := info.parsed
+		pf := info.Parsed
 
 		pkg := pf.Name.Name
 		if pkg == "documentation" {
@@ -1346,7 +1346,7 @@ type FileInfo struct {
 	Imports  []FileImport
 	Embeds   []FileEmbed
 	Fset     *token.FileSet
-	parsed   *ast.File
+	Parsed   *ast.File
 	parseErr error
 	embedErr error
 }
@@ -1502,7 +1502,7 @@ func (ctxt *Context) shouldBuild(content []byte, allTags map[string]bool) (shoul
 	// Pass 1. Identify leading run of // comments and blank lines,
 	// which must be followed by a blank line.
 	// Also identify any //go:build comments.
-	content, goBuild, sawBinaryOnly, err := parseFileHeader(content)
+	content, goBuild, sawBinaryOnly, err := ParseFileHeader(content)
 	if err != nil {
 		return false, false, err
 	}
@@ -1548,7 +1548,7 @@ func (ctxt *Context) shouldBuild(content []byte, allTags map[string]bool) (shoul
 	return shouldBuild, sawBinaryOnly, nil
 }
 
-func parseFileHeader(content []byte) (trimmed, goBuild []byte, sawBinaryOnly bool, err error) {
+func ParseFileHeader(content []byte) (trimmed, goBuild []byte, sawBinaryOnly bool, err error) {
 	end := 0
 	p := content
 	ended := false       // found non-blank, non-// line, so stopped accepting // +build lines

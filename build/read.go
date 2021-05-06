@@ -406,13 +406,14 @@ func ReadGoInfo(f io.Reader, info *FileInfo) error {
 	}
 
 	// Parse file header & record imports.
-	info.parsed, info.parseErr = parser.ParseFile(info.Fset, info.Name, info.Header, parser.ImportsOnly|parser.ParseComments)
+	info.Parsed, info.parseErr = parser.ParseFile(info.Fset, info.Name, info.Header,
+		parser.ImportsOnly|parser.ParseComments)
 	if info.parseErr != nil {
 		return nil
 	}
 
 	hasEmbed := false
-	for _, decl := range info.parsed.Decls {
+	for _, decl := range info.Parsed.Decls {
 		d, ok := decl.(*ast.GenDecl)
 		if !ok {
 			continue

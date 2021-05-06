@@ -3,13 +3,18 @@ package load
 import (
 	"encoding/json"
 	"fmt"
+	"go/ast"
+	"go/doc"
+	"go/parser"
 	"go/token"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/julieqiu/modcache/build"
+	"github.com/julieqiu/modcache/godoc"
 )
 
 // cachedImport is cfg.BuildContext.Import but cached.
@@ -81,14 +86,11 @@ func CachedImport(ctx *build.Context,
 			fi.Imports = append(fi.Imports, i.Path)
 		}
 		d.GoFiles = append(d.GoFiles, fi)
-
-		/*
-			sum, err := FileHash(filepath.Join(pkg.Dir, file))
-			if err == nil {
-				cp.FileHash[file] = hex.EncodeToString(sum[:])
-				fmt.Println("-----> ", file, cp.FileHash[file])
-			}
-		*/
+		syms, err := loadIdentifiers(pkg.ImportPath, filepath.Join(pkg.Dir, file))
+		if err != nil {
+			return nil, err
+		}
+		fi.Exports = syms
 	}
 
 	/*
@@ -115,6 +117,32 @@ func CachedImport(ctx *build.Context,
 		c.PutBytes(data)
 	}
 	return pkg, nil
+}
+
+func loadIdentifiers(importPath, filename string) ([]string, error) {
+	fset := token.NewFileSet()
+	a, err := mustParse(fset, filename)
+	if err != nil {
+		return nil, err
+	}
+	p, err := doc.NewFromFiles(fset, []*ast.File{a}, importPath)
+	if err != nil {
+		return nil, err
+	}
+	return godoc.GetSymbols(p)
+}
+
+func mustParse(fset *token.FileSet, filename string) (*ast.File, error) {
+	src, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := parser.ParseFile(fset, filename, src, parser.ParseComments)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
 }
 
 func LoadCache(cacheDir, modulePath string) (*Cache, error) {
