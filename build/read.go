@@ -355,15 +355,15 @@ func readComments(f io.Reader) ([]byte, error) {
 	return r.buf, r.err
 }
 
-// readGoInfo expects a Go file as input and reads the file up to and including the import section.
+// ReadGoInfo expects a Go file as input and reads the file up to and including the import section.
 // It records what it learned in *info.
-// If info.fset is non-nil, readGoInfo parses the file and sets info.parsed, info.parseErr,
+// If info.fset is non-nil, ReadGoInfo parses the file and sets info.parsed, info.parseErr,
 // info.imports, info.embeds, and info.embedErr.
 //
 // It only returns an error if there are problems reading the file,
 // not for syntax errors in the file itself.
-func readGoInfo(f io.Reader, info *fileInfo) error {
-	r := newImportReader(info.name, f)
+func ReadGoInfo(f io.Reader, info *FileInfo) error {
+	r := newImportReader(info.Name, f)
 
 	r.readKeyword("package")
 	r.readIdent()
@@ -380,12 +380,12 @@ func readGoInfo(f io.Reader, info *fileInfo) error {
 		}
 	}
 
-	info.header = r.buf
+	info.Header = r.buf
 
 	// If we stopped successfully before EOF, we read a byte that told us we were done.
 	// Return all but that last byte, which would cause a syntax error if we let it through.
 	if r.err == nil && !r.eof {
-		info.header = r.buf[:len(r.buf)-1]
+		info.Header = r.buf[:len(r.buf)-1]
 	}
 
 	// If we stopped for a syntax error, consume the whole file so that
@@ -395,18 +395,18 @@ func readGoInfo(f io.Reader, info *fileInfo) error {
 		for r.err == nil && !r.eof {
 			r.readByte()
 		}
-		info.header = r.buf
+		info.Header = r.buf
 	}
 	if r.err != nil {
 		return r.err
 	}
 
-	if info.fset == nil {
+	if info.Fset == nil {
 		return nil
 	}
 
 	// Parse file header & record imports.
-	info.parsed, info.parseErr = parser.ParseFile(info.fset, info.name, info.header, parser.ImportsOnly|parser.ParseComments)
+	info.parsed, info.parseErr = parser.ParseFile(info.Fset, info.Name, info.Header, parser.ImportsOnly|parser.ParseComments)
 	if info.parseErr != nil {
 		return nil
 	}
@@ -435,7 +435,7 @@ func readGoInfo(f io.Reader, info *fileInfo) error {
 			if doc == nil && len(d.Specs) == 1 {
 				doc = d.Doc
 			}
-			info.imports = append(info.imports, fileImport{path, spec.Pos(), doc})
+			info.Imports = append(info.Imports, FileImport{path, spec.Pos(), doc})
 		}
 	}
 
@@ -464,7 +464,7 @@ func readGoInfo(f io.Reader, info *fileInfo) error {
 			// and we can pretend they are not there to help go list succeed with what it knows.
 			embs, err := parseGoEmbed(string(line), pos)
 			if err == nil {
-				info.embeds = append(info.embeds, embs...)
+				info.Embeds = append(info.Embeds, embs...)
 			}
 		}
 	}
@@ -476,7 +476,7 @@ func readGoInfo(f io.Reader, info *fileInfo) error {
 // It accepts unquoted space-separated patterns as well as double-quoted and back-quoted Go strings.
 // This is based on a similar function in cmd/compile/internal/gc/noder.go;
 // this version calculates position information as well.
-func parseGoEmbed(args string, pos token.Position) ([]fileEmbed, error) {
+func parseGoEmbed(args string, pos token.Position) ([]FileEmbed, error) {
 	trimBytes := func(n int) {
 		pos.Offset += n
 		pos.Column += utf8.RuneCountInString(args[:n])
@@ -487,7 +487,7 @@ func parseGoEmbed(args string, pos token.Position) ([]fileEmbed, error) {
 		trimBytes(len(args) - len(trim))
 	}
 
-	var list []fileEmbed
+	var list []FileEmbed
 	for trimSpace(); args != ""; trimSpace() {
 		var path string
 		pathPos := pos
@@ -540,7 +540,7 @@ func parseGoEmbed(args string, pos token.Position) ([]fileEmbed, error) {
 				return nil, fmt.Errorf("invalid quoted string in //go:embed: %s", args)
 			}
 		}
-		list = append(list, fileEmbed{path, pathPos})
+		list = append(list, FileEmbed{path, pathPos})
 	}
 	return list, nil
 }

@@ -38,7 +38,7 @@ func StringList(args ...interface{}) []string {
 
 // A Cache is a package cache, backed by a file system directory tree.
 type Cache struct {
-	Dirs []Dir
+	Dirs map[string]*Dir
 
 	dir    string
 	now    func() time.Time
@@ -54,13 +54,13 @@ type Dir struct {
 	Root          string
 	SrcRoot       string
 	PkgRoot       string
-	GoFiles       []FileInfo
+	GoFiles       []*FileInfo
 }
 
 type FileInfo struct {
 	Name      string
 	BuildTags []string
-	Imports   []string // how do I know which import is in which file
+	Imports   []string
 	// ImportPos       []string
 	// EmbedPatterns   []string
 	// EmbedPatternPos []string

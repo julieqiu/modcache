@@ -1,15 +1,14 @@
 package load
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/julieqiu/modcache/build"
 )
 
@@ -40,39 +39,75 @@ func CachedImport(ctx *build.Context,
 	if err != nil {
 		return nil, err
 	}
-	spew.Dump(pkg)
 
 	// We have the:
 	// - Package
 	// - Loaded all the files of that package
-	var cp LegacyCachedPackage
-	cp.Build = *pkg
-	allFiles := StringList(
+	goFiles := StringList(
 		pkg.GoFiles,
-		pkg.CgoFiles,
-		pkg.CFiles,
-		pkg.CXXFiles,
-		pkg.MFiles,
-		pkg.HFiles,
-		pkg.FFiles,
-		pkg.SFiles,
-		pkg.SwigFiles,
-		pkg.SwigCXXFiles,
-		pkg.SysoFiles,
 		pkg.TestGoFiles,
 		pkg.XTestGoFiles,
 	)
-	cp.FileHash = make(map[string]string)
 	fmt.Println("Looping through all of the files in the package...")
-	for _, file := range allFiles {
-		sum, err := FileHash(filepath.Join(pkg.Dir, file))
-		if err == nil {
-			cp.FileHash[file] = hex.EncodeToString(sum[:])
-			fmt.Println("-----> ", file, cp.FileHash[file])
-		}
+
+	if c.Dirs == nil {
+		c.Dirs = map[string]*Dir{}
 	}
+	d := &Dir{
+		Path:          pkg.Dir,
+		Name:          pkg.Name,
+		ImportComment: pkg.ImportComment,
+		Doc:           pkg.Doc,
+		ImportPath:    pkg.ImportPath,
+		Root:          pkg.Root,
+		SrcRoot:       pkg.SrcRoot,
+		PkgRoot:       pkg.PkgRoot,
+	}
+	c.Dirs[pkg.Dir] = d
+	for _, file := range goFiles {
+		fset := token.NewFileSet()
+		info := &build.FileInfo{Fset: fset, Name: filepath.Join(pkg.Dir, file)}
+		f, err := os.Open(filepath.Join(pkg.Dir, file))
+		if err != nil {
+			return nil, err
+		}
+		if err := build.ReadGoInfo(f, info); err != nil {
+			return nil, err
+		}
+		f.Close()
+
+		fi := &FileInfo{Name: info.Name}
+		for _, i := range info.Imports {
+			fi.Imports = append(fi.Imports, i.Path)
+		}
+		d.GoFiles = append(d.GoFiles, fi)
+
+		/*
+			sum, err := FileHash(filepath.Join(pkg.Dir, file))
+			if err == nil {
+				cp.FileHash[file] = hex.EncodeToString(sum[:])
+				fmt.Println("-----> ", file, cp.FileHash[file])
+			}
+		*/
+	}
+
+	/*
+		nonGoFiles := StringList(
+			pkg.CgoFiles,
+			pkg.CFiles,
+			pkg.CXXFiles,
+			pkg.MFiles,
+			pkg.HFiles,
+			pkg.FFiles,
+			pkg.SFiles,
+			pkg.SwigFiles,
+			pkg.SwigCXXFiles,
+			pkg.SysoFiles,
+		)
+	*/
+
 	fmt.Println("Marshaling data to file")
-	data, err := json.MarshalIndent(&cp, "", "\t")
+	data, err := json.MarshalIndent(&c.Dirs, "", "\t")
 	if err == nil {
 		data = append(data, '\n')
 		// Write to the cache

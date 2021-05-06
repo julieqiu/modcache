@@ -841,7 +841,7 @@ Found:
 			}
 			continue
 		}
-		data, filename := info.header, info.name
+		data, filename := info.Header, info.Name
 
 		// Going to save the file. For non-Go files, can stop here.
 		switch ext {
@@ -910,8 +910,8 @@ Found:
 
 		// Record imports and information about cgo.
 		isCgo := false
-		for _, imp := range info.imports {
-			if imp.path == "C" {
+		for _, imp := range info.Imports {
+			if imp.Path == "C" {
 				if isTest {
 					badFile(fmt.Errorf("use of cgo in test %s not supported", filename))
 					continue
@@ -953,12 +953,12 @@ Found:
 		}
 		*fileList = append(*fileList, name)
 		if importMap != nil {
-			for _, imp := range info.imports {
-				importMap[imp.path] = append(importMap[imp.path], fset.Position(imp.pos))
+			for _, imp := range info.Imports {
+				importMap[imp.Path] = append(importMap[imp.Path], fset.Position(imp.pos))
 			}
 		}
 		if embedMap != nil {
-			for _, emb := range info.embeds {
+			for _, emb := range info.Embeds {
 				embedMap[emb.pattern] = append(embedMap[emb.pattern], emb.pos)
 			}
 		}
@@ -1339,25 +1339,25 @@ func (ctxt *Context) MatchFile(dir, name string) (match bool, err error) {
 
 var dummyPkg Package
 
-// fileInfo records information learned about a file included in a build.
-type fileInfo struct {
-	name     string // full name including dir
-	header   []byte
-	fset     *token.FileSet
+// FileInfo records information learned about a file included in a build.
+type FileInfo struct {
+	Name     string // full name including dir
+	Header   []byte
+	Imports  []FileImport
+	Embeds   []FileEmbed
+	Fset     *token.FileSet
 	parsed   *ast.File
 	parseErr error
-	imports  []fileImport
-	embeds   []fileEmbed
 	embedErr error
 }
 
-type fileImport struct {
-	path string
+type FileImport struct {
+	Path string
 	pos  token.Pos
 	doc  *ast.CommentGroup
 }
 
-type fileEmbed struct {
+type FileEmbed struct {
 	pattern string
 	pos     token.Position
 }
@@ -1374,7 +1374,7 @@ type fileEmbed struct {
 //
 // If allTags is non-nil, matchFile records any encountered build tag
 // by setting allTags[tag] = true.
-func (ctxt *Context) matchFile(dir, name string, allTags map[string]bool, binaryOnly *bool, fset *token.FileSet) (*fileInfo, error) {
+func (ctxt *Context) matchFile(dir, name string, allTags map[string]bool, binaryOnly *bool, fset *token.FileSet) (*FileInfo, error) {
 	if strings.HasPrefix(name, "_") ||
 		strings.HasPrefix(name, ".") {
 		return nil, nil
@@ -1395,33 +1395,33 @@ func (ctxt *Context) matchFile(dir, name string, allTags map[string]bool, binary
 		return nil, nil
 	}
 
-	info := &fileInfo{name: ctxt.joinPath(dir, name), fset: fset}
+	info := &FileInfo{Name: ctxt.joinPath(dir, name), Fset: fset}
 	if ext == ".syso" {
 		// binary, no reading
 		return info, nil
 	}
 
-	f, err := ctxt.openFile(info.name)
+	f, err := ctxt.openFile(info.Name)
 	if err != nil {
 		return nil, err
 	}
 
 	if strings.HasSuffix(name, ".go") {
-		err = readGoInfo(f, info)
+		err = ReadGoInfo(f, info)
 		if strings.HasSuffix(name, "_test.go") {
 			binaryOnly = nil // ignore //go:binary-only-package comments in _test.go files
 		}
 	} else {
 		binaryOnly = nil // ignore //go:binary-only-package comments in non-Go sources
-		info.header, err = readComments(f)
+		info.Header, err = readComments(f)
 	}
 	f.Close()
 	if err != nil {
-		return nil, fmt.Errorf("read %s: %v", info.name, err)
+		return nil, fmt.Errorf("read %s: %v", info.Name, err)
 	}
 
 	// Look for +build comments to accept or reject the file.
-	ok, sawBinaryOnly, err := ctxt.shouldBuild(info.header, allTags)
+	ok, sawBinaryOnly, err := ctxt.shouldBuild(info.Header, allTags)
 	if err != nil {
 		return nil, err
 	}
