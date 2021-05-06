@@ -3,11 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"go/build"
 	"log"
 	"os"
 	"strings"
 
+	"github.com/julieqiu/modcache/build"
 	"github.com/julieqiu/modcache/load"
 )
 

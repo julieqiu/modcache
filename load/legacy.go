@@ -5,11 +5,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"go/build"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/julieqiu/modcache/build"
 )
 
 // cachedPackage is the data structure stored in the cache.

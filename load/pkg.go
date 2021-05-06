@@ -4,11 +4,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"go/build"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/julieqiu/modcache/build"
 )
 
 // cachedImport is cfg.BuildContext.Import but cached.
@@ -24,18 +26,21 @@ func CachedImport(ctx *build.Context,
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize build cache at %s: %s\n", cacheDir+modulePath, err)
 	}
-	if c.exists {
-		fmt.Println("Found!")
-		return c.Package()
-	}
+	/*
+		if c.exists {
+			fmt.Println("Found!")
+			return c.Package()
+		}
+	*/
 
 	// 2. The cache does not exist.
 	// Load the package, then write it to the cache.
 	fmt.Printf("Cache does not exist; importing %q from %q\n\n", path, srcDir)
-	pkg, err := ctx.Import(path, srcDir, mode|build.FindOnly)
+	pkg, err := ctx.Import(path, srcDir, build.ImportComment)
 	if err != nil {
 		return nil, err
 	}
+	spew.Dump(pkg)
 
 	// We have the:
 	// - Package
@@ -58,7 +63,7 @@ func CachedImport(ctx *build.Context,
 		pkg.XTestGoFiles,
 	)
 	cp.FileHash = make(map[string]string)
-	fmt.Println("Looping through all of the files in the package...\n")
+	fmt.Println("Looping through all of the files in the package...")
 	for _, file := range allFiles {
 		sum, err := FileHash(filepath.Join(pkg.Dir, file))
 		if err == nil {
@@ -104,7 +109,34 @@ func LoadCache(cacheDir, modulePath string) (*Cache, error) {
 	return c, nil
 }
 
-func (c *Cache) Package() (*build.Package, error) {
+func (c *Cache) Package(path, dir string) (*build.Package, error) {
+	// Unmarshal file to cache
+
+	/*
+			p := &build.Package{
+				ImportPath:        path,
+				Dir:               dir,
+				GoFiles:           c.GoFiles,           // .go source files (excluding CgoFiles, TestGoFiles, XTestGoFiles)
+				CgoFiles:          c.CgoFiles,          // .go source files that import "C"
+				IgnoredGoFiles:    c.IgnoredGoFiles,    // .go source files ignored for this build (including ignored _test.go files)
+				InvalidGoFiles:    c.InvalidFiles,      // .go source files with detected problems (parse error, wrong package name, and so on)
+				IgnoredOtherFiles: c.IgnoredOtherFiles, // non-.go source files ignored for this build
+				CFiles:            c.CFiles,            // .c source files
+				CXXFiles:          c.CXXFiles,          // .cc, .cpp and .cxx source files
+				MFiles:            c.MFiles,            // .m (Objective-C) source files
+				HFiles:            c.HFiles,            // .h, .hh, .hpp and .hxx source files
+				FFiles:            c.FFiles,            // .f, .F, .for and .f90 Fortran source files
+				SFiles:            c.SFiles,            // .s source files
+				SwigFiles:         c.SwigFiles,         // .swig files
+				SwigCXXFiles:      c.SwigCXXFiles,      // .swigcxx files
+				SysoFiles:         c.SysoFiles,         // .syso system object files to add to archive
+				Imports:           []string{},          // import paths from GoFiles, CgoFiles
+			}
+
+		if path == "" {
+			return p, fmt.Errorf("import %q: invalid import path", path)
+		}
+	*/
 	return &build.Package{}, nil
 }
 
