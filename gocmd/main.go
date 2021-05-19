@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/julieqiu/modcache/build"
@@ -51,3 +53,34 @@ gocmd -q [name] [symbol]
 	}
 	// Check for file.
 }
+
+/*
+const modCache = "/Users/julieqiu/go/pkg/mod"
+
+func sourceDir(modulePath, pkgPath string) (string, error) {
+	root := filepath.Join(modCache, modulePath)
+
+	var srcDir string
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			return nil
+		}
+
+		suf := strings.TrimPrefix(strings.TrimPrefix(pkgPath, modulePath), "/")
+		r := regexp.MustCompile(fmt.Sprintf("", root, suf))
+		if r.MatchString(path) {
+			fmt.Println(path)
+			srcDir = path
+			return nil
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	if srcDir == "" {
+		return "", fmt.Errorf("Not Found")
+	}
+	return srcDir, nil
+}
+*/
